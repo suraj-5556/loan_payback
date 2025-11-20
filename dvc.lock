@@ -51,11 +51,11 @@ stages:
       params.yaml:
         model_training:
           random_state: 42
-          n_estimators: 100
+          n_estimators: 300
           criterion: gini
-          max_depth: 5
+          max_depth: 10
           min_samples_split: 5
-          bootstrap: true
+          bootstrap: false
           min_samples_leaf": 2
     outs:
     - path: data/evaul_data
@@ -65,15 +65,15 @@ stages:
       nfiles: 4
     - path: models/model.pkl
       hash: md5
-      md5: fffb0add42a9a06e12c162dcc0aaab8b
-      size: 503565
+      md5: 886f7801604851ae74cc78ab05102530
+      size: 21809803
   model_ev:
     cmd: python src/model_ev.py
     deps:
     - path: models/model.pkl
       hash: md5
-      md5: fffb0add42a9a06e12c162dcc0aaab8b
-      size: 503565
+      md5: 886f7801604851ae74cc78ab05102530
+      size: 21809803
     - path: src/model_ev.py
       hash: md5
       md5: 855479dbaa0650757093100a0791a2b7
@@ -81,5 +81,5 @@ stages:
     outs:
     - path: reports/metrics.json
       hash: md5
-      md5: 525d9d21bafe674f39e715d46b9e333d
+      md5: f4f8387b6c6f97f53184bd391e2b528b
       size: 145
