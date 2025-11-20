@@ -61,9 +61,11 @@ def process_grade (df):
 
 
 def main():
-    path = r"data\train.csv"
+    path = r"data\raw\train.csv"
     df = load_data(path)
+    logger.debug("data fetch from aws")
     df = feature_manager(df)
+    logger.debug("done feture engineering")
     df = process_grade(df)
     dir_path = r"data\clean_data"
     os.makedirs(dir_path, exist_ok = True)

@@ -1,4 +1,5 @@
 import os
+import yaml
 import logging
 import pickle
 import pandas as pd
@@ -6,8 +7,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import tensorflow as tf
-from sklearn.utils import class_weight
-from tensorflow.keras import layers, models, callbacks
+from sklearn.ensemble import RandomForestClassifier
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -26,6 +26,22 @@ consoler.setFormatter(formater)
 logger.addHandler(file_handler)
 logger.addHandler(consoler)
 logger.debug("model-training module entered")
+
+def load_params(params_path):
+    try:
+        with open(params_path, 'r') as file:
+            params = yaml.safe_load(file)
+        logger.debug('Parameters retrieved from %s', params_path)
+        return params
+    except FileNotFoundError:
+        logger.error('File not found: %s', params_path)
+        raise e
+    except yaml.YAMLError as e:
+        logger.error('YAML error: %s', e)
+        raise e
+    except Exception as e:
+        logger.error('Unexpected error: %s', e)
+        raise e
 
 def load_data(path):
     try:
@@ -50,60 +66,66 @@ def processing(df):
         logger.error("isuue with standard scaler")
         raise e
 
-def build_model(input_dim):
-    model = models.Sequential()
-    model.add(layers.Input(shape=(input_dim,)))
-    model.add(layers.Dense(128, activation='relu'))
-    model.add(layers.BatchNormalization())
-    model.add(layers.Dropout(0.3))
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.BatchNormalization())
-    model.add(layers.Dropout(0.25))
-    model.add(layers.Dense(32, activation='relu'))
-    model.add(layers.Dense(1, activation='sigmoid'))  
-    return model
 
 def save_model(model, path="model.pkl"):
     with open(path, "wb") as f:
         pickle.dump(model, f)
 
 def main():
-    path=r"data/clean_data/train.csv"
-    df=load_data(path)
-    x,y=processing(df)
+    path = r"data/clean_data/train.csv"
+    df = load_data(path)
+    x,y = processing(df)
+    logger.debug("preprocessing done")
+
+    params = load_params(params_path='params.yaml')
+    randomstate = params['model_training']['random_state']
+    nestimators = params['model_training']['n_estimators']
+    criterions = params['model_training']['criterion']
+    maxdepth = params['model_training']['max_depth']
+    min_samples_split = params['model_training']['min_samples_split']
+    bootstraps = params['model_training']['bootstrap']
     
     try:
-        model=build_model(x.shape[1])
+        model = RandomForestClassifier(random_state = randomstate, n_estimators = nestimators, 
+                                       criterion = criterions, max_depth = maxdepth,
+                                       min_samples_split=min_samples_split, bootstrap = bootstraps)
     except Exception as e:
         logger.error("error in model creation")
         raise e
     
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
-        loss='binary_crossentropy',
-        metrics=['accuracy', tf.keras.metrics.AUC(name='auc')]
-    )
-    es = callbacks.EarlyStopping(monitor='val_auc', patience=8, mode='max', restore_best_weights=True, verbose=1)
-    reduce_lr = callbacks.ReduceLROnPlateau(monitor='val_auc', factor=0.5, patience=4, mode='max', verbose=1)
-    
-    class_weights = class_weight.compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
-    class_weights = dict(enumerate(class_weights))
+    x_train,x_test,y_train,y_test=train_test_split(x,y,test_size = 0.2,random_state = 42)
 
-    x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2,random_state=42)
+    model.fit(x_train,y_train)
+    logger.debug("done model training")
 
-    history = model.fit(
-        x_train, y_train,
-        validation_data=(x_test,y_test),
-        epochs=100,
-        batch_size=2048,
-        callbacks=[es, reduce_lr],
-        class_weight=class_weights,
-        verbose=0
-    )
     dir_path = r"models"
     os.makedirs(dir_path, exist_ok = True)
     file_path = os.path.join(dir_path, "model.pkl")
     save_model(model,file_path)
+
+    dir = r"data/evaul_data"
+    os.makedirs(dir, exist_ok = True)
+
+    x_train = pd.DataFrame(x_train)
+    x_test = pd.DataFrame(x_test)
+    y_train = pd.DataFrame(y_train)
+    y_test = pd.DataFrame(y_test)
+
+    logger.debug("train testing data extracted")
+
+
+    file_path = os.path.join(dir, "x_train.csv")
+    x_train.to_csv(file_path, index = False)
+    file_path = os.path.join(dir, "x_test.csv")
+    x_test.to_csv(file_path, index = False)
+
+    file_path = os.path.join(dir, "y_train.csv")
+    y_train.to_csv(file_path, index = False)
+    file_path = os.path.join(dir, "y_test.csv")
+    y_test.to_csv(file_path, index = False)
+
+    logger.debug("training testing data saved")
+
 
 
 if __name__ == "__main__":

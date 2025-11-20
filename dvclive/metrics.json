@@ -1,0 +1,8 @@
+{
+    "accuracy_train": 0.8980578407259774,
+    "precision_train": 0.8931981836262776,
+    "recall_train": 0.9906712203160091,
+    "accuracy_test": 0.8957723784081754,
+    "precision_test": 0.8913158782969285,
+    "recall_test": 0.9890844882016159
+}

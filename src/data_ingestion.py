@@ -66,7 +66,8 @@ def fetch_data(host,user,password,database,table):
 def main():
     host,user,password,database,table=fetch_cred()
     df = fetch_data(host,user,password,database,table)
-    dir_path = "data"
+    logger.debug("data retrival from sql")
+    dir_path = "data/raw"
     os.makedirs(dir_path, exist_ok = True)
     file_path = os.path.join(dir_path, "train.csv")
     df.to_csv(file_path, index = False)

@@ -1,0 +1,43 @@
+stages:
+  data_ingestion:
+    cmd: python src/data_ingestion.py
+    deps:
+    - .env
+    - src/data_ingestion.py
+    outs:
+    - data/raw
+
+  pre_processing:
+    cmd: python src/pre_processing.py
+    deps:
+    - data/raw
+    - src/pre_processing.py
+    outs:
+    - data/clean_data
+
+  model_training:
+    cmd: python src/model_training.py
+    deps:
+    - data/clean_data
+    - src/model_training.py
+    params:
+    - model_training
+    outs:
+    - data/evaul_data
+    - models/model.pkl
+
+  model_ev:
+    cmd: python src/model_ev.py
+    deps:
+    - models/model.pkl
+    - src/model_ev.py
+    metrics:
+    - reports/metrics.json
+
+metrics:
+- dvclive/metrics.json
+plots:
+- dvclive/plots/metrics:
+    x: step
+params:
+- dvclive/params.yaml
